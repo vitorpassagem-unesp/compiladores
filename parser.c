@@ -231,6 +231,6 @@ void match(int expected_token)
                 lookahead = gettoken(source);
             }
           //Jump para mybc()  
-          longjmp(erro, 0);
+          longjmp(erro, 1);
 	}
 }
