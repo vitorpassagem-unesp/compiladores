@@ -18,4 +18,4 @@ mostlyclean: clean
 
 #empacota o projeto em um .targz
 targz:
-	/usr/bin/tar zcvf aula05.tar.gz *.[ch] Makefile ./versioned/
+	/usr/bin/tar zcvf mybc_grp02.tar.gz *.[ch] Makefile

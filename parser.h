@@ -1,3 +1,11 @@
+//mybc_grp02
+/*
+Grupo 2: 
+Gustavo Varjão de Frias
+Vitor Ferreira
+Vitor Alves Chuquer Zanetti Passagem
+*/
+
 extern char lexeme[]; // definido no lexer.c
 extern int lookahead; // definido no parser.c
 extern int gettoken(FILE *); // definido no lexer.c

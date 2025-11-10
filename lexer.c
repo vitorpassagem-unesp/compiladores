@@ -1,3 +1,11 @@
+//mybc_grp02
+/*
+Grupo 2: 
+Gustavo Varjão de Frias
+Vitor Ferreira
+Vitor Alves Chuquer Zanetti Passagem
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
