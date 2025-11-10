@@ -2,7 +2,7 @@
 
 | Item | Instrução | Responsável | Concluída |
 | --- | --- | --- | --- |
-| 0 | identificar os membros do grupo, bem como o número tanto no preâmbulo do código principal, quanto no nome do pacote *.tar.gz; |  |  |
+| 0 | identificar os membros do grupo, bem como o número tanto no preâmbulo do código principal, quanto no nome do pacote *.tar.gz; | Vitor F. | Sim |
 | 1 | modificar a função match para que, em caso de erro, acuse o número da linha e a coluna; |  |  |
 | 2 | a mensagem de erro de sintaxe, ainda no match, deve ser reportando o que era esperado e o que foi encontrado; |  |  |
 | 3 | não é para imprimir o número associado ao token e sim o nome do mesmo, à exceção dos códigos ASCII, como ';' '.' etc; |  |  |
