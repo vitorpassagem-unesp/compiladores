@@ -70,6 +70,54 @@ CMDSEP -> [;\n] == ';' | '\n' // definido no lexer
 
 */
 
+//Função para traduzir o token esperado em erro legível
+const char *tokenname(int token){
+	switch(token){
+		case EXIT:
+			return "EXIT";
+		case QUIT:
+			return "QUIT";
+		case ID:
+			return "ID";
+		case DEC:
+			return "DEC";
+		case FLT:
+			return "FLT";
+		case HEX:
+			return "HEX";
+		case OCT:
+			return "OCT";
+		case ASGN:
+			return "ASGN";
+		case EOF:
+			return "EOF";
+		case '+':
+			return "'+'";
+		case '-':
+			return "'-'";
+		case '*':
+			return "'*'";
+		case '/':
+			return "'/'";
+		case '(':
+			return "'('";
+		case ')':
+			return "')'";
+		case ';':
+			return "';'";
+		case '\n':
+			return "'\\n'";
+		default: {
+			static char buf[16];
+			if (isprint(token))
+				sprintf(buf, "'%c'", token);
+			else
+				sprintf(buf, "token %d", token);
+			return buf;
+		}
+	}
+}
+
 void mybc(){
         //Ponto onde o jump vem em caso de erro, devolvendo o controle ao interpretador
         int controle = setjmp(erro);
@@ -145,7 +193,20 @@ _Fbegin:
 			//=/**/printf(" %s ", lexeme);/**/
 			/**/acc = atoi(lexeme); /**/ //-> variavel que vai representar o registrador eax para fazer a conversão de string p/ numero
 			// faço direto, pq sei que vai vir um novo operador, ai preciso usar stk
-			match(DEC); break;
+			match(DEC);
+
+			if (lookahead == DEC || lookahead == FLT || lookahead == HEX || lookahead == OCT || lookahead == ID) {
+				fprintf(stderr,
+					"Erro de sintaxe na linha %d, coluna %d: é esperado operador antes de %s ('%s')\n",
+					lineno, colno,
+					tokenname(lookahead),
+					lexeme
+				);
+				exit(ERRTOKEN);
+			}
+
+			break;
+
 		case FLT:
 			//=/**/printf(" %s ", lexeme);/**/
 			/**/acc = atof(lexeme); /**/
@@ -219,8 +280,11 @@ void match(int expected_token)
 	if (lookahead == expected_token) {
 		lookahead = gettoken(source);
 	} else {
-		// Este bloco é executado quando ocorre erro
-		fprintf(stderr, "token mismatch at line %d\n", lineno);
+		//Erro de sintaxe genérico -> aqui ele espera o EOF por causa do processamento da gramática 
+		// - na função E temos um Erro (linha 191) para quando falta operador entre dois números, por exemplo 3 2 1
+		fprintf(stderr, "Erro de sintaxe na linha %d e coluna %d.\n", lineno, colno);
+		printf("Token Esperado: %s --- Token no lookahead: %s\n", tokenname(expected_token), tokenname(lookahead));
+		exit(ERRTOKEN);
 		
                 // Esvazia pilha e zera o acumulador
                 sp = -1;

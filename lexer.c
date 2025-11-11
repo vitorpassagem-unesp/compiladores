@@ -228,6 +228,7 @@ int isHEX(FILE *tape)
 }
 
 int lineno = 1;
+int colno = 1;
 
 // Skip spaces
 void skipspaces(FILE *tape)
@@ -236,7 +237,11 @@ void skipspaces(FILE *tape)
 	while ( isspace(head = getc(tape)) ) {
 		if (head == '\n') {
 			lineno++;
+			colno = 1;
 			break;
+		}
+		else if(head != EOF){
+			colno++;
 		}
 	}
 	ungetc(head, tape);

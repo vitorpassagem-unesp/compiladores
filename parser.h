@@ -14,6 +14,7 @@ extern void match(int expected); // definido no parser.c
 extern FILE *source;
 
 extern int lineno;
+extern int colno;
 
 extern void E(void);
 extern void cmd(void);
