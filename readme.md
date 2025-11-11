@@ -157,7 +157,8 @@ Erro de sintaxe na linha 1, coluna 4: é esperado um operador antes de número (
 |-------------|-----------|-----------------|
 | 1 (maior)   | `*`, `/`  | Esquerda       |
 | 2           | `+`, `-`  | Esquerda       |
-| 3           | `-` (unário) | Direita     |
+| 3           | `-` (unário) | n/a     |
+| 4           | `:=` (binário) | Direita     |
 
 ### Convenções de Comentários
 - `/**/`: Marca ações semânticas (atribuições, operações na pilha)
