@@ -15,8 +15,8 @@ extern FILE *source;
 
 extern int lineno;
 extern int colno;
-extern int last_colno = 1;
-extern int newline_flag = 0;
+extern int last_colno;
+extern int newline_flag;
 
 extern void E(void);
 extern void cmd(void);

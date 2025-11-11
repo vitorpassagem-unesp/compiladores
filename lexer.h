@@ -10,5 +10,5 @@ Vitor Alves Chuquer Zanetti Passagem
 extern char lexeme[MAXIDLEN + 1];
 extern int lineno;
 extern int colno;
-extern int last_colno = 1;
-extern int newline_flag = 0;
+extern int last_colno;
+extern int newline_flag;

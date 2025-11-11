@@ -315,7 +315,7 @@ int gettoken(FILE *source)
 	if ((token = isID(source)))  return token;  // Identificadores e palavras reservadas
 	if ((token = isHEX(source))) return token;  // Hexadecimais (0x...)
 	if ((token = isOCT(source))) return token;  // Octais (0...)
-	if ((token = isDEC(source))) return token;  // Decimais e floats
+	if ((token = isNUM(source))) return token;  // Números (inteiros e floats) - DEVE vir antes de isDEC
 	if ((token = isASGN(source))) return token; // Operador de atribuição :=
 
 	// Lê caractere ASCII simples (operadores, delimitadores)
