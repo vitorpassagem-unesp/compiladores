@@ -15,7 +15,7 @@ Vitor Alves Chuquer Zanetti Passagem
 #include <setjmp.h> /*Biblioteca com funções de jump para restaurar o controle do interpretador em caso de erro*/
 #include <tokens.h>
 #include <parser.h>
-
+#include <signal.h> //Biblioteca para tratar sinais do sistema operacional (Ex: Ctrl + C)
 
 /**********************************************************************************************************
  ************************************ Interpretador de Expressões MyBC ************************************
@@ -78,15 +78,11 @@ const char *tokenname(int token){
 		case QUIT:
 			return "QUIT";
 		case ID:
-			return "ID";
 		case DEC:
-			return "DEC";
 		case FLT:
-			return "FLT";
 		case HEX:
-			return "HEX";
 		case OCT:
-			return "OCT";
+			return "número";
 		case ASGN:
 			return "ASGN";
 		case EOF:
@@ -118,9 +114,23 @@ const char *tokenname(int token){
 	}
 }
 
+void  handle_signal(int signal){
+	(void)signal;
+	printf("\n");
+	fflush(stdout);// aqui ele está sendo usado para imprimir imediatamente o \n
+}
+
 void mybc(){
         //Ponto onde o jump vem em caso de erro, devolvendo o controle ao interpretador
         int controle = setjmp(erro);
+
+		signal(SIGINT, handle_signal); //tratamento do ctrl + c
+
+		if(controle != 0){
+				// Em caso de erro, esvazia a pilha e zera o acumulador
+				sp = -1;
+				acc = 0;
+		}
         
 	cmd();
 	while(lookahead == ';' || lookahead == '\n'){
@@ -197,7 +207,7 @@ _Fbegin:
 
 			if (lookahead == DEC || lookahead == FLT || lookahead == HEX || lookahead == OCT || lookahead == ID) {
 				fprintf(stderr,
-					"Erro de sintaxe na linha %d, coluna %d: é esperado operador antes de %s ('%s')\n",
+					"Erro de sintaxe na linha %d, coluna %d: é esperado um operador antes de %s ('%s')\n",
 					lineno, colno,
 					tokenname(lookahead),
 					lexeme
@@ -272,17 +282,26 @@ _Fbegin:
 	}
 }
 
+
 /*** A principal função (procedimento) interface do parser é a match
 -> match vai consumir um token da cadeia de entrada, se ele corresponder com a sintaxe
  */
 void match(int expected_token)
 {
 	if (lookahead == expected_token) {
+
+		if (lookahead == '\n' && newline_flag) {
+            lineno++;
+			colno = 1;
+            newline_flag = 0;
+        }
+		
 		lookahead = gettoken(source);
+
 	} else {
 		//Erro de sintaxe genérico -> aqui ele espera o EOF por causa do processamento da gramática 
 		// - na função E temos um Erro (linha 191) para quando falta operador entre dois números, por exemplo 3 2 1
-		fprintf(stderr, "Erro de sintaxe na linha %d e coluna %d.\n", lineno, colno);
+		fprintf(stderr, "Erro de sintaxe na linha %d e coluna %d.\n", lineno, last_colno);
 		printf("Token Esperado: %s --- Token no lookahead: %s\n", tokenname(expected_token), tokenname(lookahead));
 		exit(ERRTOKEN);
 		

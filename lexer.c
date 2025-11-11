@@ -15,24 +15,35 @@ Vitor Alves Chuquer Zanetti Passagem
 
 char lexeme[MAXIDLEN + 1];
 
-/* Versão extendida de identificador Pascal
+int lineno = 1;
+int colno = 1;
+int last_colno = 1;
+int newline_flag = 0;
+
+//last_colno: guarda a última coluna válida antes de '\n', usada nas mensagens de erro
+// para evitar que o erro seja identificado na primeira coluna da proxima linha após o ENTER.
+
+//newline_flag: indica que um '\n' foi lido; o parser usa essa flag para atualizar
+// o número da linha (lineno) no momento certo, evitando incrementos duplos.
+
+
+/*
  * ID = [A-Za-z][A-Za-z0-9]*
  */
 int isID(FILE *tape)
 {
-	if ( isalpha(lexeme[0] = getc(tape)) ) {
+	if (isalpha(lexeme[0] = getc(tape))) {
 		int i = 1;
-		while ( isalnum( lexeme[i] = getc(tape) ) ) i++;
+		colno++; last_colno = colno;
+
+		while (isalnum(lexeme[i] = getc(tape))) {
+			i++; colno++; last_colno = colno;
+		}
 		ungetc(lexeme[i], tape);
 		lexeme[i] = 0;
 
-		if (strcmp(lexeme, "exit") == 0) {
-			return EXIT;
-		}
-		if (strcmp(lexeme, "quit") == 0){
-			return QUIT;
-		}
-
+		if (strcmp(lexeme, "exit") == 0) return EXIT;
+		if (strcmp(lexeme, "quit") == 0) return QUIT;
 		return ID;
 	}
 
@@ -40,6 +51,10 @@ int isID(FILE *tape)
 	lexeme[0] = 0;
 	return 0;
 }
+
+/*
+ * DEC = [1-9][0-9]* | '0'
+ */
 
 /*
  * DEC = [1-9][0-9]* | '0'
@@ -55,14 +70,18 @@ int isID(FILE *tape)
  *       V
  *     ((0))
  */
+
 int isDEC(FILE *tape)
 {
-	if ( isdigit(lexeme[0] = getc(tape)) ) {
-		if (lexeme[0] == '0') {
-			return DEC;
-		}
+	if (isdigit(lexeme[0] = getc(tape))) {
 		int i = 1;
-		while ( isdigit(lexeme[i] = getc(tape)) ) i++;
+		colno++; last_colno = colno;
+
+		if (lexeme[0] == '0') return DEC;
+
+		while (isdigit(lexeme[i] = getc(tape))) {
+			i++; colno++; last_colno = colno;
+		}
 		ungetc(lexeme[i], tape);
 		lexeme[i] = 0;
 		return DEC;
@@ -157,21 +176,6 @@ int isNUM(FILE *tape)
 	return token;
 }
 
-int isASGN(FILE *tape)
-{
-	lexeme[0] = getc(tape);
-	if (lexeme[0] == ':') {
-		lexeme[1] = getc(tape);
-		if (lexeme[1] == '=') {
-			lexeme[2] = 0;
-			return ASGN;
-		}
-		ungetc(lexeme[1], tape);
-	}
-	ungetc(lexeme[0], tape);
-	return lexeme[0] = 0;
-}
-
 /*
  * OCT = '0'[0-7]+
  */
@@ -227,21 +231,34 @@ int isHEX(FILE *tape)
 	return 0;
 }
 
-int lineno = 1;
-int colno = 1;
+int isASGN(FILE *tape)
+{
+	lexeme[0] = getc(tape);
+	if (lexeme[0] == ':') {
+		lexeme[1] = getc(tape);
+		if (lexeme[1] == '=') {
+			lexeme[2] = 0;
+			colno += 2; last_colno = colno;
+			return ASGN;
+		}
+		ungetc(lexeme[1], tape);
+	}
+	ungetc(lexeme[0], tape);
+	return lexeme[0] = 0;
+}
 
-// Skip spaces
 void skipspaces(FILE *tape)
 {
 	int head;
-	while ( isspace(head = getc(tape)) ) {
+	while (isspace(head = getc(tape))) {
 		if (head == '\n') {
-			lineno++;
-			colno = 1;
+			newline_flag = 1;
+			last_colno = colno;
 			break;
 		}
-		else if(head != EOF){
+		else if (head != EOF) {
 			colno++;
+			last_colno = colno;
 		}
 	}
 	ungetc(head, tape);
@@ -253,15 +270,38 @@ int gettoken(FILE *source)
 
 	skipspaces(source);
 
-	if ( (token = isID(source)) ) return token;
-	if ( (token = isHEX(source)) ) return token;
-	if ( (token = isOCT(source)) ) return token;
-	if ( (token = isNUM(source)) ) return token;
-	if ( (token = isASGN(source)) ) return token;
+	if ((token = isID(source)))  return token;
+	if ((token = isHEX(source))) return token;
+	if ((token = isOCT(source))) return token;
+	if ((token = isDEC(source))) return token;
+	if ((token = isASGN(source))) return token;
 
 	lexeme[0] = token = getc(source);
 	lexeme[1] = 0;
 
-	// return an ASCII token
-	return token;
+	// Tokens ASCII simples
+	switch (token) {
+		case '+': 
+		case '-': 
+		case '*': 
+		case '/':
+		case '(': 
+		case ')': 
+		case ';': 
+		case '.':
+			colno++; last_colno = colno;
+			return token;
+
+		case '\n':
+			newline_flag = 1;
+			last_colno = colno;
+			return '\n';
+
+		case EOF:
+			return EOF;
+
+		default:
+			fprintf(stderr, "Erro léxico na linha %d e coluna %d: charactere inválido '%c'\n", lineno, last_colno, token);
+			break;
+	}
 }
