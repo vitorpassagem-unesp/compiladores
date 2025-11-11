@@ -36,25 +36,24 @@ Vitor Alves Chuquer Zanetti Passagem
  * F -> ID | DEC | ( E )
  */
 
-int lookahead; // O olho do parser, é por este operador que o parser enxerga antecipadamente os tokens
-	       // provenientes do lexer
+int lookahead; // Token corrente visualizado pelo parser (lookahead de 1 símbolo)
 
-double acc; // acumulador para fazer a operação que vier na expressão, se acumulador acc já estiver cheio utiliza-se stk = acc -> para exp: + -> acc = acc + stk
+double acc; // Acumulador para armazenar resultado intermediário das operações
 
 #define STACK_SIZE 256
 
-// como é a seção bss, o array será inicializado com zero
+// Pilha para salvar operandos durante avaliação de expressões
 double stack[STACK_SIZE];
 
 //stack pointer
-int sp = -1; //-1 representa pilha vazia
+int sp = -1; // Ponteiro de pilha: -1 representa pilha vazia
 
 #define VMEM_SIZE 4096
-double vmem[VMEM_SIZE];
-char symboltable[VMEM_SIZE];
-int symboltable_next_query = 0;//se tiver vazia, a proxima posição livre é 0
-double recall(char * symbol);
-int store(char *symbol);
+double vmem[VMEM_SIZE];           // Memória virtual para armazenar valores de variáveis
+char symboltable[VMEM_SIZE];      // Tabela de símbolos (nomes de variáveis)
+int symboltable_next_query = 0;  // Próxima posição livre na tabela
+double recall(char * symbol);    // Recupera valor de variável
+int store(char *symbol);         // Armazena valor de variável
 
 //Variável que irá indicar o ponto a partir do qual o código é executado quando a função longjmp() é chamada
 jmp_buf erro;
@@ -104,6 +103,7 @@ const char *tokenname(int token){
 		case '\n':
 			return "'\\n'";
 		default: {
+			// Tokens não mapeados: imprime caractere ou código numérico
 			static char buf[16];
 			if (isprint(token))
 				sprintf(buf, "'%c'", token);
@@ -114,41 +114,45 @@ const char *tokenname(int token){
 	}
 }
 
+// Handler para captura de sinais do sistema (ex: Ctrl+C)
 void  handle_signal(int signal){
-	(void)signal;
+	(void)signal; // Suprime warning de parâmetro não usado
 	printf("\n");
-	fflush(stdout);// aqui ele está sendo usado para imprimir imediatamente o \n
+	/**/fflush(stdout);/**/ // Força impressão imediata da quebra de linha
 }
 
 void mybc(){
-        //Ponto onde o jump vem em caso de erro, devolvendo o controle ao interpretador
+        // Ponto de retorno em caso de erro: devolve controle ao interpretador
         int controle = setjmp(erro);
 
-		signal(SIGINT, handle_signal); //tratamento do ctrl + c
+		signal(SIGINT, handle_signal); // Registra tratamento do Ctrl+C
 
 		if(controle != 0){
-				// Em caso de erro, esvazia a pilha e zera o acumulador
-				sp = -1;
-				acc = 0;
+				// Em caso de erro, restaura estado inicial
+				/**/sp = -1;/**/  // Esvazia a pilha
+				/**/acc = 0;/**/  // Zera o acumulador
 		}
         
-	cmd();
+	cmd(); // Processa primeiro comando
+	// Loop principal: consome comandos separados por ';' ou '\n'
 	while(lookahead == ';' || lookahead == '\n'){
-		match(lookahead);
-		cmd();
+		match(lookahead); // Consome separador
+		cmd();            // Processa próximo comando
 		if(lookahead ==  EOF){
-			break;
+			break; // Sai se encontrar fim de arquivo
 		}
 	}
-	match(EOF);
+	match(EOF); // Valida fim de entrada
 }
 
 void cmd(void) {
+	// Decide ação com base no token atual
 	switch(lookahead){
 		case EXIT:
 		case QUIT:
-			exit(0);
-		//Aqui é o FIRST de E -> melhor fazer a função para pegar
+			exit(0); // Encerra interpretador
+		
+		// FIRST(E): símbolos que podem iniciar uma expressão
 		case'+':
 		case'-':
 		case'(':
@@ -157,54 +161,56 @@ void cmd(void) {
 		case FLT:
 		case DEC:
 		case ID:
-			E();
-			/**/printf("%lg\n", acc);/**/
+			E(); // Avalia expressão
+			/**/printf("%lg\n", acc);/**/ // Imprime resultado no acumulador
 			break;
 		default:
-				; // transição epsilon
+				; // Comando vazio (transição epsilon)
 	}
 }
 
 
 /*
  * E -> [ ominus ] T { oplus T }
+ * Avalia expressões aritméticas com precedência de operadores
  * input: "a * b"
  * token: ID '*' ID
  */
 
-
 void E() 
 { 
-	/**/int oplus_flg = 0;/**/
-	/**/int otimes_flg = 0;/**/
-	/**/int ominus_flg = 0;/**/
+	/**/int oplus_flg = 0;/**/   // Flag para operadores + ou -
+	/**/int otimes_flg = 0;/**/  // Flag para operadores * ou /
+	/**/int ominus_flg = 0;/**/  // Flag para sinal negativo unário
+	
 	// [ ominus ]; ominus = '+'|'-'
+	// Trata sinal unário opcional no início
 	if (lookahead == '+' || lookahead == '-') {
 		/**/if (lookahead == '-') {
-			ominus_flg = lookahead;
+			ominus_flg = lookahead; // Marca negativo para aplicar depois
 		}/**/
 		match(lookahead);
 	}
-_Tbegin:
-_Fbegin:
+_Tbegin: // Label para processar termos (precedência de + e -)
+_Fbegin: // Label para processar fatores (precedência de * e /)
 	switch(lookahead) {
-		//expre entre parênteses 
+		// Expressão entre parênteses
 		case '(':
-			match('('); E(); match(')');
+			match('('); 
+			E();        // Recursão para sub-expressão
+			match(')');
 			break;
-		//sessão de constantes -> c no diagrama sintático
+		
+		// Constantes numéricas hexadecimais
 		case HEX:
-			//=/**/printf(" %s ", lexeme);/**/
 			match(HEX); break;
 		case OCT:
-			//=/**/printf(" %s ", lexeme);/**/
 			match(OCT); break;
 		case DEC:
-			//=/**/printf(" %s ", lexeme);/**/
-			/**/acc = atoi(lexeme); /**/ //-> variavel que vai representar o registrador eax para fazer a conversão de string p/ numero
-			// faço direto, pq sei que vai vir um novo operador, ai preciso usar stk
+			/**/acc = atoi(lexeme);/**/ // Converte string para inteiro e armazena
 			match(DEC);
 
+			// Detecta erro: dois números consecutivos sem operador
 			if (lookahead == DEC || lookahead == FLT || lookahead == HEX || lookahead == OCT || lookahead == ID) {
 				fprintf(stderr,
 					"Erro de sintaxe na linha %d, coluna %d: é esperado um operador antes de %s ('%s')\n",
@@ -218,67 +224,69 @@ _Fbegin:
 			break;
 
 		case FLT:
-			//=/**/printf(" %s ", lexeme);/**/
-			/**/acc = atof(lexeme); /**/
+			/**/acc = atof(lexeme);/**/ // Converte string para float e armazena
 			match(FLT); break;
 		default:
-			//envolve variaveis
-			//=/**/printf(" %s ", lexeme);/**/
+			// Identificador (variável)
 			match(ID);
-			// cheque operador atribuição, ":=" => ASGN
+			// Verifica se é atribuição
 			if (lookahead == ASGN) {
-				// variable := express
 				match(ASGN);
-				E();
+				E(); // Avalia lado direito da atribuição
 			}
 	}
-	//Se chegou operador multiplicativo, é pq já houve uma entrada de número no acc (acumulador) como 1° operando
+	
+	// Aplica operação multiplicativa pendente (* ou /)
 	/**/if (otimes_flg) {
 		if(otimes_flg == '*'){
-			acc = stack[sp] * acc;
+			acc = stack[sp] * acc; // Multiplica operando salvo com resultado atual
 		}
 		else{
-			acc = stack[sp] / acc;
+			acc = stack[sp] / acc; // Divide operando salvo por resultado atual
 		}
-		sp--; // decrementou quem está na pilha(pop)
-		otimes_flg = 0;// turnoff the otimes flag
+		sp--;              // Remove operando da pilha (pop)
+		otimes_flg = 0;    // Limpa flag
 	}/**/
+	
 	// { otimes T }; otimes = '*'|'/'
+	// Processa operadores multiplicativos (maior precedência)
 	if (lookahead == '*' || lookahead == '/') {
-		/**/otimes_flg = lookahead;/**/
+		/**/otimes_flg = lookahead;/**/ // Salva qual operador
 		/**/
-		// salva na pilha porque há de vir um próximo número e precisamos de acc, então colocamos na pilha
-		//push(acc)
-		sp++;
+		sp++;             // Empilha resultado atual (push)
 		stack[sp] = acc;
 		/**/
 		match(lookahead);
-		goto _Fbegin;
+		goto _Fbegin;     // Volta para processar próximo fator
 	}
+	
+	// Aplica sinal negativo unário
 	/**/if (ominus_flg) {
 		acc = -acc;
-		ominus_flg = 0;// turnoff ominus flag
+		ominus_flg = 0;
 	}/**/
+	
+	// Aplica operação aditiva pendente (+ ou -)
 	/**/if (oplus_flg) {
 		if(oplus_flg == '+'){
-			acc = stack[sp] + acc;
+			acc = stack[sp] + acc; // Soma operando salvo com resultado atual
 		}
 		else{
-			acc = stack[sp] - acc;
+			acc = stack[sp] - acc; // Subtrai resultado atual do operando salvo
 		}
-		sp--; // decrementou quem está na pilha(pop)
-		oplus_flg = 0;// turnoff the oplus flag
+		sp--;             // Remove operando da pilha (pop)
+		oplus_flg = 0;    // Limpa flag
 	}/**/
+	
+	// Processa operadores aditivos (menor precedência)
 	if (lookahead == '+' || lookahead == '-') {
-		/**/oplus_flg = lookahead;/**/
-		// salva na pilha porque há de vir um próximo número e precisamos de acc, então colocamos na pilha
-		//push(acc)
-		/**/ // um meta -> não faz parte da linguagem
-		sp++;
+		/**/oplus_flg = lookahead;/**/ // Salva qual operador
+		/**/
+		sp++;             // Empilha resultado atual (push)
 		stack[sp] = acc;
 		/**/
 		match(lookahead);
-		goto _Tbegin;
+		goto _Tbegin;     // Volta para processar próximo termo
 	}
 }
 
@@ -290,30 +298,30 @@ void match(int expected_token)
 {
 	if (lookahead == expected_token) {
 
+		// Atualiza contador de linha quando newline é consumido
 		if (lookahead == '\n' && newline_flag) {
-            lineno++;
-			colno = 1;
-            newline_flag = 0;
+            /**/lineno++;/**/       // Incrementa linha
+			/**/colno = 1;/**/      // Reseta coluna
+            /**/newline_flag = 0;/**/ // Limpa flag
         }
 		
-		lookahead = gettoken(source);
+		/**/lookahead = gettoken(source);/**/ // Avança para próximo token
 
 	} else {
-		//Erro de sintaxe genérico -> aqui ele espera o EOF por causa do processamento da gramática 
-		// - na função E temos um Erro (linha 191) para quando falta operador entre dois números, por exemplo 3 2 1
+		// Erro de sintaxe: token encontrado não corresponde ao esperado
 		fprintf(stderr, "Erro de sintaxe na linha %d e coluna %d.\n", lineno, last_colno);
 		printf("Token Esperado: %s --- Token no lookahead: %s\n", tokenname(expected_token), tokenname(lookahead));
 		exit(ERRTOKEN);
 		
-                // Esvazia pilha e zera o acumulador
-                sp = -1;
-                acc = 0;
+                // Restaura estado do interpretador
+                /**/sp = -1;/**/   // Esvazia pilha
+                /**/acc = 0;/**/   // Zera acumulador
 
-                // Descarta tokens até o próximo comando
+                // Descarta tokens até próximo separador de comando
                 while (lookahead != ';' && lookahead != '\n' && lookahead != EOF) {
-                lookahead = gettoken(source);
+                /**/lookahead = gettoken(source);/**/
             }
-          //Jump para mybc()  
+          // Retorna controle ao interpretador principal
           longjmp(erro, 1);
 	}
 }
