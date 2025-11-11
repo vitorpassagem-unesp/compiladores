@@ -218,7 +218,7 @@ _Fbegin: // Label para processar fatores (precedência de * e /)
 					tokenname(lookahead),
 					lexeme
 				);
-				exit(ERRTOKEN);
+				//exit(ERRTOKEN);
 			}
 
 			break;
@@ -311,7 +311,7 @@ void match(int expected_token)
 		// Erro de sintaxe: token encontrado não corresponde ao esperado
 		fprintf(stderr, "Erro de sintaxe na linha %d e coluna %d.\n", lineno, last_colno);
 		printf("Token Esperado: %s --- Token no lookahead: %s\n", tokenname(expected_token), tokenname(lookahead));
-		exit(ERRTOKEN);
+		//exit(ERRTOKEN);
 		
                 // Restaura estado do interpretador
                 /**/sp = -1;/**/   // Esvazia pilha
