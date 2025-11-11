@@ -12,13 +12,10 @@ Vitor Alves Chuquer Zanetti Passagem
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include <setjmp.h> /*Biblioteca com funções de jump para restaurar o controle do interpretador em caso de erro*/
 #include <tokens.h>
 #include <parser.h>
-
-
 /**********************************************************************************************************
- ************************************ Interpretador de Expressões MyBC ************************************
+ ********************** Compilador de expressões Pascal para expressões pós-fixas *************************
  **********************************************************************************************************/
 
 
@@ -35,6 +32,55 @@ Vitor Alves Chuquer Zanetti Passagem
  * Q -> * F Q | / F Q | <epsilon>
  * F -> ID | DEC | ( E )
  */
+
+
+//Função para traduzir o token esperado em erro legível
+const char *tokenname(int token){
+	switch(token){
+		case EXIT:
+			return "EXIT";
+		case QUIT:
+			return "QUIT";
+		case ID:
+			return "ID";
+		case DEC:
+			return "DEC";
+		case FLT:
+			return "FLT";
+		case HEX:
+			return "HEX";
+		case OCT:
+			return "OCT";
+		case ASGN:
+			return "ASGN";
+		case EOF:
+			return "EOF";
+		case '+':
+			return "'+'";
+		case '-':
+			return "'-'";
+		case '*':
+			return "'*'";
+		case '/':
+			return "'/'";
+		case '(':
+			return "'('";
+		case ')':
+			return "')'";
+		case ';':
+			return "';'";
+		case '\n':
+			return "'\\n'";
+		default: {
+			static char buf[16];
+			if (isprint(token))
+				sprintf(buf, "'%c'", token);
+			else
+				sprintf(buf, "token %d", token);
+			return buf;
+		}
+	}
+}
 
 int lookahead; // O olho do parser, é por este operador que o parser enxerga antecipadamente os tokens
 	       // provenientes do lexer
@@ -56,8 +102,6 @@ int symboltable_next_query = 0;//se tiver vazia, a proxima posição livre é 0
 double recall(char * symbol);
 int store(char *symbol);
 
-//Variável que irá indicar o ponto a partir do qual o código é executado quando a função longjmp() é chamada
-jmp_buf erro;
 
 //Interpretador de comadno vai ser um laço infinito (enquanto dure), que fica sempre buscando um ';' ou '\n', ele é interrompido se avistar um EOF(ctrl + d) ou comando quit ou exit
 
@@ -71,9 +115,6 @@ CMDSEP -> [;\n] == ';' | '\n' // definido no lexer
 */
 
 void mybc(){
-        //Ponto onde o jump vem em caso de erro, devolvendo o controle ao interpretador
-        int controle = setjmp(erro);
-        
 	cmd();
 	while(lookahead == ';' || lookahead == '\n'){
 		match(lookahead);
@@ -145,7 +186,20 @@ _Fbegin:
 			//=/**/printf(" %s ", lexeme);/**/
 			/**/acc = atoi(lexeme); /**/ //-> variavel que vai representar o registrador eax para fazer a conversão de string p/ numero
 			// faço direto, pq sei que vai vir um novo operador, ai preciso usar stk
-			match(DEC); break;
+			match(DEC);
+
+			if (lookahead == DEC || lookahead == FLT || lookahead == HEX || lookahead == OCT || lookahead == ID) {
+				fprintf(stderr,
+					"Erro de sintaxe na linha %d, coluna %d: operador esperado antes de %s ('%s')\n",
+					lineno, colno,
+					tokenname(lookahead),
+					lexeme
+				);
+				exit(ERRTOKEN);
+			}
+
+			break;
+
 		case FLT:
 			//=/**/printf(" %s ", lexeme);/**/
 			/**/acc = atof(lexeme); /**/
@@ -212,25 +266,17 @@ _Fbegin:
 }
 
 /*** A principal função (procedimento) interface do parser é a match
--> match vai consumir um token da cadeia de entrada, se ele corresponder com a sintaxe
+-> match vai consumir um tolen da cadeia de entrada, se ele corresponder com a sintaxe
  */
 void match(int expected_token)
 {
 	if (lookahead == expected_token) {
 		lookahead = gettoken(source);
 	} else {
-		// Este bloco é executado quando ocorre erro
-		fprintf(stderr, "token mismatch at line %d\n", lineno);
-		
-                // Esvazia pilha e zera o acumulador
-                sp = -1;
-                acc = 0;
-
-                // Descarta tokens até o próximo comando
-                while (lookahead != ';' && lookahead != '\n' && lookahead != EOF) {
-                lookahead = gettoken(source);
-            }
-          //Jump para mybc()  
-          longjmp(erro, 1);
+		//Erro de sintaxe genérico -> aqui ele espera o EOF por causa do processamento da gramática 
+		// - na função E temos um Erro (linha 191) para quando falta operador entre dois números, por exemplo 3 2 1
+		fprintf(stderr, "Erro de sintaxe na linha %d e coluna %d.\n", lineno, colno);
+		printf("Token Esperado: %s --- Token no lookahead: %s\n", tokenname(expected_token), tokenname(lookahead));
+		exit(ERRTOKEN);
 	}
 }
