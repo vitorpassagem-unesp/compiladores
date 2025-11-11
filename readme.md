@@ -10,4 +10,4 @@
 | 5 | a documentação dos códigos devem ser feitas na forma de comentários elucidativos, que facilitem a compreensão dos métodos envolvidos no contexto de compiladores; | Vitor P. |  |
 | 6* | uma documentação suplementar, não necessária, seria uma redação mais didática sobre os métodos adotados e detalhes de implementação; | Vitor P. |  |
 | 7* | filtrar as teclas <- e -> para evitar corrupção do buffer stdin; |  |  |
-| 8* | capturar o sinal de interrupção (ctrl C) para imprimir uma quebra de linha |  |  |
+| 8* | capturar o sinal de interrupção (ctrl C) para imprimir uma quebra de linha | Gustavo | Sim |
