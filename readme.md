@@ -30,7 +30,7 @@ MyBC é um interpretador interativo de expressões aritméticas inspirado no com
 - **Tratamento de erros**: Mensagens detalhadas com linha e coluna
 - **Recuperação de erros**: Interpretador continua após erro sintático
 - **Interrupção controlada**: Captura `Ctrl+C` sem encerrar o programa
-- **Comandos especiais**: `exit`, `quit` para sair
+- **Comandos especiais**: `exit`, `quit` ou `Ctrl+D` para sair
 
 ---
 
