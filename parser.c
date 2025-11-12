@@ -121,6 +121,34 @@ void  handle_signal(int signal){
 	/**/fflush(stdout);/**/ // Força impressão imediata da quebra de linha
 }
 
+// Salva variáveis na tabela de símbolos
+int store(char *symbol) {
+    // Procura se a variável já existe
+    for (int i = 0; i < symboltable_next_query; i++) {
+        if (symboltable[i] == *symbol)
+            return i; // Retorna índice da variável
+    }
+
+    // Caso contrário, cria nova entrada
+    if (symboltable_next_query < VMEM_SIZE) {
+        symboltable[symboltable_next_query] = *symbol;
+        return symboltable_next_query++; // Retorna próxima posição livre da tabela
+    } else {
+        fprintf(stderr, "Erro: memória simbólica cheia.\n");
+        exit(1);
+    }
+}
+
+// Busca o valor atribúido à variável
+double recall(char *symbol) {
+    // Procura a variável na tabela
+    for (int i = 0; i < symboltable_next_query; i++) {
+        if (symboltable[i] == *symbol)
+            return vmem[i]; // Retorna valor da variável
+    }
+}
+
+
 void mybc(){
         // Ponto de retorno em caso de erro: devolve controle ao interpretador
         int controle = setjmp(erro);
@@ -227,14 +255,19 @@ _Fbegin: // Label para processar fatores (precedência de * e /)
 			/**/acc = atof(lexeme);/**/ // Converte string para float e armazena
 			match(FLT); break;
 		default:
-			// Identificador (variável)
-			match(ID);
-			// Verifica se é atribuição
-			if (lookahead == ASGN) {
-				match(ASGN);
-				E(); // Avalia lado direito da atribuição
-			}
-	}
+			char var = lexeme[0];   // Guarda o nome da variável
+                        int idx = store(&var);  // Obtém índice na tabela de símbolos
+                        match(ID);
+
+                        if (lookahead == ASGN) {
+                            match(ASGN);
+                            E(); // avalia lado direito
+                            vmem[idx] = acc; // salva valor na memória virtual
+                        } else 
+                              acc = recall(&var); // carrega valor da variável
+                          
+    
+        }
 	
 	// Aplica operação multiplicativa pendente (* ou /)
 	/**/if (otimes_flg) {
